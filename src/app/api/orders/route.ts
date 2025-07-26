@@ -6,23 +6,33 @@ export async function GET() {
     const consumerSecret = process.env.WC_CONSUMER_SECRET || '';
     const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
 
-    console.log(consumerKey, consumerSecret);
+    let allOrders: any[] = [];
+    let page = 1;
+    let hasMore = true;
 
-    const response = await fetch('https://jaxportparking.com/wp-json/wc/v3/orders?status=completed&per_page=100', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/json'
+    while (hasMore) {
+      const response = await fetch(`https://jaxportparking.com/wp-json/wc/v3/orders?status=completed&per_page=100&page=${page}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+      allOrders = [...allOrders, ...data];
+
+      hasMore = data.length === 100; // If less than 100, no more pages
+      page++;
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json(allOrders);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+    console.error('Fetch Error:', (error as Error).message);
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
