@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
 import moment from "moment";
 
 // Interfaces for WooCommerce data
@@ -27,10 +29,10 @@ export default function Home() {
       .then((res) => res.json())
       .then((orders: WooOrder[]) => {
         const bookings: { [date: string]: number } = {};
-        orders.forEach((order: any) => {
-          order.line_items.forEach((item: any) => {
+        orders.forEach((order: WooOrder) => {
+          order.line_items.forEach((item: LineItem) => {
             const startDate = item.meta_data.find(
-              (m: any) => m.key === "_prdd_lite_date"
+              (m: MetaData) => m.key === "_prdd_lite_date"
             )?.value;
             const nightsMatch = item.name.match(/(\d+)-Night/);
             const nights = nightsMatch ? parseInt(nightsMatch[1]) : 0;
@@ -47,16 +49,17 @@ export default function Home() {
         });
         const calendarEvents = Object.entries(bookings).map(
           ([date, count]) => ({
-            title: `${count} cars`,
+            title: `${count} cars (of 115)`,
             start: date,
             allDay: true,
+            color: count > 92 ? "red" : count > 50 ? "yellow" : "green", // Occupancy colors
           })
         );
         setEvents(calendarEvents);
         setLoading(false);
       })
       .catch((err) => {
-        console.error(err);
+        console.error("Fetch error:", err);
         setLoading(false);
       });
   }, []);
@@ -64,10 +67,14 @@ export default function Home() {
   if (loading) return <p>Loading orders...</p>;
 
   return (
-    <div>
-      <h1>Parking Calendar (Events: {events.length})</h1>
-      <pre>{JSON.stringify(events, null, 2)}</pre>{" "}
-      {/* Temp display for checkpoint */}
+    <div style={{ padding: "20px", maxWidth: "800px", margin: "auto" }}>
+      <h1>Parking Lot Booking Calendar</h1>
+      <FullCalendar
+        plugins={[dayGridPlugin]}
+        initialView="dayGridMonth"
+        events={events}
+        eventContent={({ event }) => <b>{event.title}</b>}
+      />
     </div>
   );
 }
