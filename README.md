@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Parking Calendar App
 
-## Getting Started
+This is a **Next.js** application that connects to a **WooCommerce API** to display a calendar of parking lot bookings for cruises at Jacksonville Port (JAXPORT).  
+It forecasts daily occupancy based on cruise durations, with color-coded levels:
 
-First, run the development server:
+- 🟩 Green: 0–57 cars (low)
+- 🟨 Yellow: 58–92 cars (medium)
+- 🟥 Red: 93–115 cars (high)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Clicking on a date logs customer details to the console (expandable to a UI).  
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Fetches **completed orders** from WooCommerce with parallel pagination
+- Processes:
+  - Delivery dates via `_prdd_lite_date` meta field
+  - Cruise durations (e.g., `"5-Night"`) to forecast parking occupancy
+- FullCalendar UI with **color-coded occupancy levels**
+- **On date click**, logs customer info (name, email) to browser console
+- **Error handling** 
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Prerequisites
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- WooCommerce API keys (read-only)
+  - Generate via: WooCommerce → Settings → Advanced → REST API
+- Node.js installed
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Setup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Clone the repo**:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+    ```bash
+    git clone https://github.com/eromelus/parking-calendar.git
+    cd parking-calendar
+    ```
+
+2. **Install dependencies**:
+
+    ```bash
+    npm install
+    ```
+
+3. **Create `.env.local`** and add your WooCommerce credentials:
+
+    ```env
+    WC_CONSUMER_KEY=your_ck_key
+    WC_CONSUMER_SECRET=your_cs_key
+    ```
+
+4. **Run locally**:
+
+    ```bash
+    npm run dev
+    ```
+
+    Visit [http://localhost:3000](http://localhost:3000) to see the calendar.
+
+---
+
+## Deployment
+
+- **Deployed to Vercel**:  
+  [Insert Vercel URL here, e.g., `https://parking-calendar.vercel.app`]
+
+- **Environment Variables**:  
+  `WC_CONSUMER_KEY` and `WC_CONSUMER_SECRET` are securely stored in the Vercel dashboard.
+
+---
+
+## Usage
+
+- Bookings load automatically from WooCommerce
+- Click on a date to log that day's orders/customers (name + email) in the browser console (F12 → Console)
+- **Color key**:
+  - 🟩 Green: 0–57 cars
+  - 🟨 Yellow: 58–92 cars
+  - 🟥 Red: 93–115 cars
+
+---
+
+## Future Improvements
+
+- Move customer data from **console** to a **modal UI**
+- Improve performance with **caching**
