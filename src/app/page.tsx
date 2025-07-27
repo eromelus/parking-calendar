@@ -23,11 +23,16 @@ interface WooOrder {
 export default function Home() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/orders")
-      .then((res) => res.json())
-      .then((orders: WooOrder[]) => {
+    const loadOrders = async () => {
+      try {
+        const response = await fetch("/api/orders");
+        if (!response.ok) {
+          throw new Error("Failed to fetch orders");
+        }
+        const orders: WooOrder[] = await response.json(); // Direct array from API
         const bookings: { [date: string]: number } = {};
         orders.forEach((order: WooOrder) => {
           order.line_items.forEach((item: LineItem) => {
@@ -56,15 +61,20 @@ export default function Home() {
           })
         );
         setEvents(calendarEvents);
-        setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "An unknown error occurred";
+        setError(errorMessage);
         console.error("Fetch error:", err);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+    loadOrders();
   }, []);
 
   if (loading) return <p>Loading orders...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   return (
     <div style={{ padding: "20px", maxWidth: "800px", margin: "auto" }}>
