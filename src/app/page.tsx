@@ -17,11 +17,19 @@ interface LineItem {
 }
 
 interface WooOrder {
+  id: number; // Added for logging
   line_items: LineItem[];
+  billing: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+  };
 }
 
 export default function Home() {
   const [events, setEvents] = useState<any[]>([]);
+  const [orders, setOrders] = useState<WooOrder[]>([]); // New state for raw orders
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,9 +40,10 @@ export default function Home() {
         if (!response.ok) {
           throw new Error("Failed to fetch orders");
         }
-        const orders: WooOrder[] = await response.json(); // Direct array from API
+        const fetchedOrders: WooOrder[] = await response.json(); // Direct array from API
+        setOrders(fetchedOrders); // Save raw orders
         const bookings: { [date: string]: number } = {};
-        orders.forEach((order: WooOrder) => {
+        fetchedOrders.forEach((order: WooOrder) => {
           order.line_items.forEach((item: LineItem) => {
             const startDate = item.meta_data.find(
               (m: MetaData) => m.key === "_prdd_lite_date"
@@ -84,6 +93,40 @@ export default function Home() {
         initialView="dayGridMonth"
         events={events}
         eventContent={({ event }) => <b>{event.title}</b>}
+        eventClick={(info) => {
+          const clickedDate = info.event.startStr;
+          const matchingOrders = orders
+            .filter((order: WooOrder) => {
+              return order.line_items.some((item: LineItem) => {
+                const startDate = item.meta_data.find(
+                  (m: MetaData) => m.key === "_prdd_lite_date"
+                )?.value;
+                const nightsMatch = item.name.match(/(\d+)-Night/);
+                const nights = nightsMatch ? parseInt(nightsMatch[1]) : 0;
+                const duration = nights + 1;
+                if (startDate) {
+                  for (let i = 0; i < duration; i++) {
+                    const dateKey = moment(startDate)
+                      .add(i, "days")
+                      .format("YYYY-MM-DD");
+                    if (dateKey === clickedDate) return true;
+                  }
+                }
+                return false;
+              });
+            })
+            .map((order) => ({
+              id: order.id,
+              customer: `${order.billing.first_name} ${order.billing.last_name}`,
+              email: order.billing.email,
+              phone: order.billing.phone,
+              cars: order.line_items.reduce(
+                (sum, item) => sum + item.quantity,
+                0
+              ),
+            }));
+          console.log(`Orders for ${clickedDate}:`, matchingOrders);
+        }}
       />
     </div>
   );
