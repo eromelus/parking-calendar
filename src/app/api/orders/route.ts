@@ -11,7 +11,7 @@ export async function GET() {
     let hasMore = true;
 
     while (hasMore) {
-      const response = await fetch(`https://jaxportparking.com/wp-json/wc/v3/orders?status=completed&per_page=100&page=${page}`, {
+      const response = await fetch(`https://jaxportparking.com/wp-json/wc/v3/orders?status=completed&per_page=100&page=${page}&after=2025-01-01T00:00:00`, {
         method: 'GET',
         headers: {
           'Authorization': `Basic ${auth}`,
