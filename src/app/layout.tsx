@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Parking Calendar - JAXPORT Cruise Bookings",
   description:
-    "GTrack parking bookings for JAXPORT cruises with occupancy forecasting. Built with Next.js and WooCommerce API",
+    "Track parking bookings for JAXPORT cruises with occupancy forecasting. Built with Next.js and WooCommerce API",
 };
 
 export default function RootLayout({

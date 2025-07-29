@@ -87,7 +87,7 @@ export default function Home() {
 
   return (
     <div style={{ padding: "20px", maxWidth: "800px", margin: "auto" }}>
-      <h1>Parking Lot Booking Calendar</h1>
+      <h1>Parking Lot Booking Calendar - {new Date().toLocaleDateString()}</h1>
       <FullCalendar
         plugins={[dayGridPlugin]}
         initialView="dayGridMonth"
