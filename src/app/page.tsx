@@ -141,24 +141,27 @@ export default function Home() {
             padding: "20px",
             border: "1px solid black",
             zIndex: 1000,
+            maxHeight: "70vh",
+            overflowY: "auto",
           }}
         >
           <div
             style={{
               display: "flex",
               justifyContent: "flex-end",
+              border: "1px solid gray",
               padding: "5px",
             }}
           >
             <button
               onClick={() => setSelectedDate(null)}
-              style={{ fontWeight: "bold", fontSize: "1.2rem" }}
+              style={{ padding: "5px 10px" }}
             >
               Close
             </button>
           </div>
-          <h2>Orders for {selectedDate}</h2>
-          <ul>
+          <h2 style={{ color: "#333" }}>Orders for {selectedDate}</h2>
+          <ul style={{ color: "#333" }}>
             {orders
               .filter((order: WooOrder) => {
                 return order.line_items.some((item: LineItem) => {
@@ -180,7 +183,7 @@ export default function Home() {
                 });
               })
               .map((order: WooOrder) => (
-                <li key={order.id}>
+                <li key={order.id} style={{ color: "#333" }}>
                   ID: {order.id} - {order.billing.first_name}{" "}
                   {order.billing.last_name} ({order.billing.email},{" "}
                   {order.billing.phone}) -{" "}
