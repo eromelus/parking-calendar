@@ -7,7 +7,7 @@ It forecasts daily occupancy based on cruise durations, with color-coded levels:
 - 🟨 Yellow: 58–92 cars (medium)
 - 🟥 Red: 93–115 cars (high)
 
-Clicking on a date logs customer details to the console (expandable to a UI).  
+Features a **mobile-first responsive design** with an interactive modal that displays customer details when clicking on calendar dates.  
 
 ---
 
@@ -18,7 +18,8 @@ Clicking on a date logs customer details to the console (expandable to a UI).
   - Delivery dates via `_prdd_lite_date` meta field
   - Cruise durations (e.g., `"5-Night"`) to forecast parking occupancy
 - FullCalendar UI with **color-coded occupancy levels**
-- **On date click**, logs customer info (name, email) to browser console
+- **Interactive modal UI** that displays customer info (name, email) when clicking dates
+- **Mobile-first responsive design** with modern styling
 - **Error handling** 
 
 ---
@@ -76,15 +77,24 @@ Clicking on a date logs customer details to the console (expandable to a UI).
 ## Usage
 
 - Bookings load automatically from WooCommerce
-- Click on a date to log that day's orders/customers (name + email) in the browser console (F12 → Console)
+- Click on a date to view that day's orders/customers in an interactive modal window
+- Modal displays customer names and emails with scrollable content
 - **Color key**:
   - 🟩 Green: 0–57 cars
   - 🟨 Yellow: 58–92 cars
   - 🟥 Red: 93–115 cars
+- **Responsive design** optimized for mobile and desktop viewing
 
 ---
 
+## Recent Updates
+
+- ✅ **Modal UI implemented** - Customer data now displays in an interactive modal instead of console
+- ✅ **Mobile-first responsive design** - Redesigned interface optimized for all device sizes
+- ✅ **Enhanced user experience** - Scrollable modal with improved typography and contrast
+
 ## Future Improvements
 
-- Move customer data from **console** to a **modal UI**
 - Improve performance with **caching**
+- Add filtering and search capabilities
+- Export functionality for booking data
