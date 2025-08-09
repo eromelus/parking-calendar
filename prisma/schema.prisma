@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id                Int           @id @default(autoincrement())
+  wooCommerceId     Int           @unique @map("woo_commerce_id")
+  status            String        @db.VarChar(50)
+  dateCreated       DateTime      @map("date_created")
+  billingFirstName  String        @map("billing_first_name") @db.VarChar(100)
+  billingLastName   String        @map("billing_last_name") @db.VarChar(100)
+  billingEmail      String        @map("billing_email") @db.VarChar(255)
+  billingPhone      String?       @map("billing_phone") @db.VarChar(50)
+  lineItems         LineItem[]
+  dailyOccupancy    DailyOccupancy[]
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  @@map("orders")
+  @@index([wooCommerceId])
+  @@index([status])
+  @@index([dateCreated])
+}
+
+model LineItem {
+  id                Int      @id @default(autoincrement())
+  orderId           Int      @map("order_id")
+  wooCommerceId     Int      @map("woo_commerce_id")
+  name              String   @db.VarChar(255)
+  quantity          Int
+  deliveryDate      DateTime? @map("delivery_date")
+  cruiseDuration    Int?     @map("cruise_duration")
+  metaData          Json?    @map("meta_data")
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("line_items")
+  @@index([orderId])
+  @@index([deliveryDate])
+}
+
+model DailyOccupancy {
+  id                Int      @id @default(autoincrement())
+  date              DateTime @unique
+  carCount          Int      @default(0) @map("car_count")
+  occupancyPercentage Float  @default(0) @map("occupancy_percentage")
+  orders            Order[]
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("daily_occupancy")
+  @@index([date])
+}
+
+model SyncStatus {
+  id                Int      @id @default(autoincrement())
+  lastSyncAt        DateTime @map("last_sync_at")
+  syncType          String   @map("sync_type") @db.VarChar(50)
+  ordersProcessed   Int      @default(0) @map("orders_processed")
+  errors            Json?
+  status            String   @default("completed") @db.VarChar(50)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("sync_status")
+}
