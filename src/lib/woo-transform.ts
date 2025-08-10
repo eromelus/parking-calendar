@@ -71,6 +71,10 @@ export function calculateDailyOccupancy(lineItems: LineItem[]) {
   return dailyOccupancy
 }
 
+export function calculateOccupancyPercentage(carCount: number, maxCapacity: number = 115): number {
+  return Math.round((carCount / maxCapacity) * 100)
+}
+
 export function transformDBOrderForAPI(dbOrder: any) {
   return {
     id: dbOrder.wooCommerceId,

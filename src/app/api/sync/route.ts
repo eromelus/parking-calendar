@@ -53,11 +53,34 @@ export async function POST(request: Request) {
       // Process each order
       for (const wooOrder of wooOrders) {
         try {
-          await prisma.order.upsert({
-            where: { wooCommerceId: wooOrder.id },
-            update: transformWooOrderForDB(wooOrder),
-            create: transformWooOrderForDB(wooOrder)
+          // Check if order exists
+          const existingOrder = await prisma.order.findUnique({
+            where: { wooCommerceId: wooOrder.id }
           })
+
+          if (existingOrder) {
+            // Update existing order - delete old line items first
+            await prisma.order.update({
+              where: { wooCommerceId: wooOrder.id },
+              data: {
+                status: wooOrder.status,
+                dateCreated: new Date(wooOrder.date_created),
+                billingFirstName: wooOrder.billing.first_name,
+                billingLastName: wooOrder.billing.last_name,
+                billingEmail: wooOrder.billing.email,
+                billingPhone: wooOrder.billing.phone || null,
+                lineItems: {
+                  deleteMany: {}, // Delete all existing line items
+                  create: wooOrder.line_items.map(item => transformLineItemForDB(item))
+                }
+              }
+            })
+          } else {
+            // Create new order
+            await prisma.order.create({
+              data: transformWooOrderForDB(wooOrder)
+            })
+          }
           ordersProcessed++
         } catch (error: any) {
           errors.push({ orderId: wooOrder.id, error: error.message })
@@ -170,7 +193,7 @@ async function recalculateDailyOccupancy() {
   const occupancyData = Array.from(occupancyMap.entries()).map(([date, carCount]) => ({
     date: new Date(date),
     carCount,
-    occupancyPercentage: Math.min((carCount / 115) * 100, 100) // 115 max capacity
+    occupancyPercentage: Math.round((carCount / 115) * 100) // 115 max capacity
   }))
   
   if (occupancyData.length > 0) {

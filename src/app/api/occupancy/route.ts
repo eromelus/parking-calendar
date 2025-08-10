@@ -22,29 +22,79 @@ export async function GET(request: Request) {
           lte: new Date(endDate)
         }
       },
-      include: {
-        orders: {
-          include: {
-            lineItems: {
-              where: {
-                deliveryDate: {
-                  gte: new Date(startDate),
-                  lte: new Date(endDate)
-                }
+      orderBy: { date: 'asc' }
+    })
+
+    // Get orders for each date by finding line items with delivery dates
+    const formattedData = await Promise.all(occupancyData.map(async (day) => {
+      const dayString = day.date.toISOString().split('T')[0]
+      
+      // Find orders that have line items with delivery dates covering this day
+      const orders = await prisma.order.findMany({
+        where: {
+          lineItems: {
+            some: {
+              deliveryDate: {
+                lte: new Date(dayString)
+              },
+              cruiseDuration: {
+                not: null
+              }
+            }
+          }
+        },
+        include: {
+          lineItems: {
+            where: {
+              deliveryDate: {
+                not: null
+              },
+              cruiseDuration: {
+                not: null
               }
             }
           }
         }
-      },
-      orderBy: { date: 'asc' }
-    })
+      })
 
-    // Transform to match existing DayData interface
-    const formattedData = occupancyData.map(day => ({
-      date: day.date.toISOString().split('T')[0],
-      carCount: day.carCount,
-      occupancyPercentage: day.occupancyPercentage,
-      orders: day.orders.map(order => transformDBOrderForAPI(order))
+      // Filter orders that actually span this date
+      const ordersForThisDate = orders.filter(order => {
+        return order.lineItems.some(item => {
+          if (!item.deliveryDate || !item.cruiseDuration) return false
+          
+          const startDate = new Date(item.deliveryDate)
+          const endDate = new Date(startDate)
+          endDate.setDate(startDate.getDate() + item.cruiseDuration)
+          
+          const currentDate = new Date(dayString)
+          return currentDate >= startDate && currentDate <= endDate
+        })
+      })
+
+      // Calculate correct car count from actual orders for this date
+      const actualCarCount = ordersForThisDate.reduce((total, order) => {
+        return total + order.lineItems.reduce((orderTotal, item) => {
+          // Only count this line item if it spans this specific date
+          if (item.deliveryDate && item.cruiseDuration) {
+            const startDate = new Date(item.deliveryDate)
+            const endDate = new Date(startDate)
+            endDate.setDate(startDate.getDate() + item.cruiseDuration)
+            
+            const currentDate = new Date(dayString)
+            if (currentDate >= startDate && currentDate <= endDate) {
+              return orderTotal + item.quantity
+            }
+          }
+          return orderTotal
+        }, 0)
+      }, 0)
+
+      return {
+        date: dayString,
+        carCount: actualCarCount, // Use real-time calculation instead of pre-calculated
+        occupancyPercentage: Math.round((actualCarCount / 115) * 100),
+        orders: ordersForThisDate.map(order => transformDBOrderForAPI(order))
+      }
     }))
 
     return NextResponse.json(formattedData)

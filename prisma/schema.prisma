@@ -17,7 +17,6 @@ model Order {
   billingEmail      String        @map("billing_email") @db.VarChar(255)
   billingPhone      String?       @map("billing_phone") @db.VarChar(50)
   lineItems         LineItem[]
-  dailyOccupancy    DailyOccupancy[]
   createdAt         DateTime      @default(now()) @map("created_at")
   updatedAt         DateTime      @updatedAt @map("updated_at")
 
@@ -50,7 +49,6 @@ model DailyOccupancy {
   date              DateTime @unique
   carCount          Int      @default(0) @map("car_count")
   occupancyPercentage Float  @default(0) @map("occupancy_percentage")
-  orders            Order[]
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
