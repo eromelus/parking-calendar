@@ -16,11 +16,19 @@ interface WooOrder {
   };
 }
 
+interface ThirdPartyBooking {
+  id: string;
+  date: string;
+  carCount: number;
+  source: string;
+}
+
 interface DayData {
   date: string;
   carCount: number;
   occupancyPercentage: number;
   orders?: WooOrder[];
+  thirdPartyBookings?: ThirdPartyBooking[];
 }
 
 interface OrderModalProps {
@@ -72,6 +80,7 @@ export default function OrderModal({ date, dayData, onClose }: OrderModalProps) 
               </h2>
               <p className="text-blue-100 mt-1">
                 {dayData.orders ? `${dayData.orders.length} order${dayData.orders.length !== 1 ? 's' : ''}` : 'Loading orders...'} • {dayData.carCount} car{dayData.carCount !== 1 ? 's' : ''} • {dayData.occupancyPercentage}% occupied
+                {dayData.thirdPartyBookings && dayData.thirdPartyBookings.length > 0 && ` • +${dayData.thirdPartyBookings.reduce((sum, booking) => sum + booking.carCount, 0)} third-party`}
               </p>
             </div>
             
@@ -105,6 +114,56 @@ export default function OrderModal({ date, dayData, onClose }: OrderModalProps) 
             </div>
           ) : (
             <div className="p-6 space-y-4">
+              {/* Third-Party Bookings Section */}
+              {dayData.thirdPartyBookings && dayData.thirdPartyBookings.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Third-Party Bookings
+                  </h3>
+                  
+                  {dayData.thirdPartyBookings.map((booking, index) => (
+                    <div key={booking.id} className="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-purple-900">
+                            Third-Party Booking #{index + 1}
+                          </h4>
+                          <p className="text-sm text-purple-700">External booking source</p>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2v0a2 2 0 01-2-2v-2a2 2 0 00-2-2H8z" />
+                            </svg>
+                            {booking.carCount} car{booking.carCount !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-purple-100 rounded-md p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-purple-900">Source Website</span>
+                          <span className="text-sm text-purple-700">{booking.source}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* WooCommerce Orders Section */}
+              {dayData.orders && dayData.orders.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    WooCommerce Orders
+                  </h3>
+                </div>
+              )}
+
               {dayData.orders.map((order, index) => (
                 <div key={order.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
                   {/* Order Header */}

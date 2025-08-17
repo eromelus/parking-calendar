@@ -20,17 +20,15 @@ export default function CalendarGrid({
   dayData, 
   onDateClick 
 }: CalendarGridProps) {
-  // Generate calendar days for the current month view
+  // Generate calendar days for the current month only
   const generateCalendarDays = () => {
     const startOfMonth = moment(currentMonth).startOf('month');
     const endOfMonth = moment(currentMonth).endOf('month');
-    const startOfCalendar = moment(startOfMonth).startOf('week');
-    const endOfCalendar = moment(endOfMonth).endOf('week');
     
     const days: string[] = [];
-    const current = moment(startOfCalendar);
+    const current = moment(startOfMonth);
     
-    while (current.isSameOrBefore(endOfCalendar)) {
+    while (current.isSameOrBefore(endOfMonth)) {
       days.push(current.format('YYYY-MM-DD'));
       current.add(1, 'day');
     }
@@ -125,24 +123,26 @@ export default function CalendarGrid({
         </div>
       </div>
 
-      {/* Desktop: Traditional 7-Column Grid */}
-      <div className="hidden lg:grid grid-cols-7 gap-2">
-        {calendarDays.map((date) => {
-          const isCurrentMonth = moment(date).isSame(currentMonth, 'month');
-          const isToday = date === today;
-          const dayInfo = dayDataMap[date];
+      {/* Desktop: Responsive Grid */}
+      <div className="hidden lg:block">
+        <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}>
+          {calendarDays.map((date) => {
+            const isCurrentMonth = moment(date).isSame(currentMonth, 'month');
+            const isToday = date === today;
+            const dayInfo = dayDataMap[date];
 
-          return (
-            <DayCard
-              key={date}
-              date={date}
-              dayData={dayInfo}
-              isCurrentMonth={isCurrentMonth}
-              isToday={isToday}
-              onClick={onDateClick}
-            />
-          );
-        })}
+            return (
+              <DayCard
+                key={date}
+                date={date}
+                dayData={dayInfo}
+                isCurrentMonth={isCurrentMonth}
+                isToday={isToday}
+                onClick={onDateClick}
+              />
+            );
+          })}
+        </div>
       </div>
     </div>
   );

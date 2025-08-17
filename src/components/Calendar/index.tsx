@@ -5,6 +5,7 @@ import CalendarHeader from "./CalendarHeader";
 import CalendarGrid from "./CalendarGrid";
 import OrderModal from "./OrderModal";
 import StatsBar from "./StatsBar";
+import ThirdPartyModal, { getThirdPartyBookings, ThirdPartyBooking } from "./ThirdPartyModal";
 
 // Interfaces for WooCommerce data
 interface MetaData {
@@ -34,6 +35,7 @@ interface DayData {
   carCount: number;
   occupancyPercentage: number;
   orders?: WooOrder[];
+  thirdPartyBookings?: ThirdPartyBooking[];
 }
 
 interface SyncStatus {
@@ -56,11 +58,40 @@ export default function Calendar({ className = "" }: CalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [showThirdPartyModal, setShowThirdPartyModal] = useState(false);
 
   useEffect(() => {
     loadCalendarData();
     checkSyncStatus();
   }, [currentMonth]);
+
+  // Function to merge database data with third-party bookings
+  const mergeWithThirdPartyData = (dbData: DayData[]): DayData[] => {
+    const thirdPartyBookings = getThirdPartyBookings();
+    
+    // Group third-party bookings by date
+    const thirdPartyByDate = new Map<string, ThirdPartyBooking[]>();
+    thirdPartyBookings.forEach(booking => {
+      const existing = thirdPartyByDate.get(booking.date) || [];
+      existing.push(booking);
+      thirdPartyByDate.set(booking.date, existing);
+    });
+    
+    return dbData.map(day => {
+      const dayThirdPartyBookings = thirdPartyByDate.get(day.date);
+      if (dayThirdPartyBookings && dayThirdPartyBookings.length > 0) {
+        const thirdPartyCarCount = dayThirdPartyBookings.reduce((sum, booking) => sum + booking.carCount, 0);
+        const totalCarCount = day.carCount + thirdPartyCarCount;
+        return {
+          ...day,
+          carCount: totalCarCount,
+          occupancyPercentage: Math.round((totalCarCount / 115) * 100),
+          thirdPartyBookings: dayThirdPartyBookings
+        };
+      }
+      return day;
+    });
+  };
 
   const loadCalendarData = async () => {
     try {
@@ -78,7 +109,10 @@ export default function Calendar({ className = "" }: CalendarProps) {
       }
       
       const data: DayData[] = await response.json();
-      setDayData(data);
+      
+      // Merge with third-party bookings
+      const mergedData = mergeWithThirdPartyData(data);
+      setDayData(mergedData);
       setError(null);
     } catch (err) {
       const errorMessage =
@@ -173,6 +207,11 @@ export default function Calendar({ className = "" }: CalendarProps) {
     setSelectedDate(null);
   };
 
+  const handleThirdPartyUpdate = () => {
+    // Refresh calendar data to show updated third-party bookings
+    loadCalendarData();
+  };
+
   const handleMonthChange = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev => 
       direction === 'next' 
@@ -240,13 +279,22 @@ export default function Calendar({ className = "" }: CalendarProps) {
           ) : null}
         </div>
         
-        <button 
-          onClick={handleManualSync}
-          disabled={syncing || syncStatus?.status === 'running'}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {syncing ? 'Syncing...' : 'Sync Now'}
-        </button>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setShowThirdPartyModal(true)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors duration-200"
+          >
+            Manage Third-Party
+          </button>
+          
+          <button 
+            onClick={handleManualSync}
+            disabled={syncing || syncStatus?.status === 'running'}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </button>
+        </div>
       </div>
       
       <CalendarHeader
@@ -268,6 +316,13 @@ export default function Calendar({ className = "" }: CalendarProps) {
           date={selectedDate}
           dayData={selectedDayData}
           onClose={handleCloseModal}
+        />
+      )}
+
+      {showThirdPartyModal && (
+        <ThirdPartyModal
+          onClose={() => setShowThirdPartyModal(false)}
+          onUpdate={handleThirdPartyUpdate}
         />
       )}
     </div>

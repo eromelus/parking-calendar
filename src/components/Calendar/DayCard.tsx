@@ -1,11 +1,19 @@
 "use client";
 import moment from "moment";
 
+interface ThirdPartyBooking {
+  id: string;
+  date: string;
+  carCount: number;
+  source: string;
+}
+
 interface DayData {
   date: string;
   carCount: number;
   occupancyPercentage: number;
   orders?: any[];
+  thirdPartyBookings?: ThirdPartyBooking[];
 }
 
 interface DayCardProps {
@@ -107,6 +115,12 @@ export default function DayCard({
               {dayData.orders.length} order{dayData.orders.length !== 1 ? 's' : ''}
             </div>
           )}
+          
+          {dayData.thirdPartyBookings && dayData.thirdPartyBookings.length > 0 && (
+            <div className="text-xs text-purple-600 font-medium">
+              +{dayData.thirdPartyBookings.reduce((sum, booking) => sum + booking.carCount, 0)} third-party
+            </div>
+          )}
         </div>
       )}
       
@@ -121,6 +135,7 @@ export default function DayCard({
       {isToday && (
         <div className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
       )}
+      
     </button>
   );
 }
