@@ -20,7 +20,7 @@ interface DayData {
   date: string;
   carCount: number;
   occupancyPercentage: number;
-  orders: WooOrder[];
+  orders?: WooOrder[];
 }
 
 interface OrderModalProps {
@@ -71,7 +71,7 @@ export default function OrderModal({ date, dayData, onClose }: OrderModalProps) 
                 {moment(date).format('MMMM D, YYYY')}
               </h2>
               <p className="text-blue-100 mt-1">
-                {dayData.orders.length} order{dayData.orders.length !== 1 ? 's' : ''} • {dayData.carCount} car{dayData.carCount !== 1 ? 's' : ''} • {dayData.occupancyPercentage}% occupied
+                {dayData.orders ? `${dayData.orders.length} order${dayData.orders.length !== 1 ? 's' : ''}` : 'Loading orders...'} • {dayData.carCount} car{dayData.carCount !== 1 ? 's' : ''} • {dayData.occupancyPercentage}% occupied
               </p>
             </div>
             
@@ -89,7 +89,13 @@ export default function OrderModal({ date, dayData, onClose }: OrderModalProps) 
 
         {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
-          {dayData.orders.length === 0 ? (
+          {!dayData.orders ? (
+            <div className="p-8 text-center">
+              <div className="animate-spin h-12 w-12 border-4 border-blue-600 rounded-full border-t-transparent mx-auto mb-4"></div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading orders...</h3>
+              <p className="text-gray-600">Fetching booking details for this date.</p>
+            </div>
+          ) : dayData.orders.length === 0 ? (
             <div className="p-8 text-center">
               <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h6M8 7V3a2 2 0 012-2h6M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V9a2 2 0 00-2-2h-2M8 7V3a2 2 0 012-2h6" />

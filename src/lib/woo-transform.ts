@@ -56,7 +56,8 @@ export function calculateDailyOccupancy(lineItems: LineItem[]) {
   
   lineItems.forEach(item => {
     if (item.deliveryDate && item.cruiseDuration) {
-      const startDate = moment(item.deliveryDate)
+      // Use ISO date string to avoid timezone issues
+      const startDate = moment(item.deliveryDate.toISOString().split('T')[0])
       const totalDays = item.cruiseDuration + 1
       
       for (let i = 0; i < totalDays; i++) {
@@ -76,6 +77,23 @@ export function calculateOccupancyPercentage(carCount: number, maxCapacity: numb
 }
 
 export function transformDBOrderForAPI(dbOrder: any) {
+  // Deduplicate line items by wooCommerceId and name
+  const uniqueLineItems = dbOrder.lineItems.reduce((acc: any[], item: any) => {
+    const existingItem = acc.find(existing => 
+      existing.wooCommerceId === item.wooCommerceId && 
+      existing.name === item.name &&
+      existing.deliveryDate?.getTime() === item.deliveryDate?.getTime()
+    )
+    
+    if (existingItem) {
+      // Sum quantities for duplicate items
+      existingItem.quantity += item.quantity
+    } else {
+      acc.push(item)
+    }
+    return acc
+  }, [])
+
   return {
     id: dbOrder.wooCommerceId,
     status: dbOrder.status,
@@ -86,17 +104,28 @@ export function transformDBOrderForAPI(dbOrder: any) {
       email: dbOrder.billingEmail,
       phone: dbOrder.billingPhone
     },
-    line_items: dbOrder.lineItems.map((item: any) => ({
-      id: item.wooCommerceId,
-      name: item.name,
-      quantity: item.quantity,
-      meta_data: [
-        ...(item.metaData as any[] || []),
-        ...(item.deliveryDate ? [{ 
-          key: '_prdd_lite_date', 
-          value: item.deliveryDate.toISOString().split('T')[0] 
-        }] : [])
-      ]
-    }))
+    line_items: uniqueLineItems.map((item: any) => {
+      // Deduplicate meta_data entries
+      const uniqueMetaData = (item.metaData as any[] || []).reduce((acc: any[], meta: any) => {
+        const existing = acc.find(m => m.key === meta.key)
+        if (!existing) {
+          acc.push(meta)
+        }
+        return acc
+      }, [])
+
+      return {
+        id: item.wooCommerceId,
+        name: item.name,
+        quantity: item.quantity,
+        meta_data: [
+          ...uniqueMetaData,
+          ...(item.deliveryDate ? [{ 
+            key: '_prdd_lite_date', 
+            value: item.deliveryDate.toISOString().split('T')[0] 
+          }] : [])
+        ]
+      }
+    })
   }
 }

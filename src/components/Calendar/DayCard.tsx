@@ -5,7 +5,7 @@ interface DayData {
   date: string;
   carCount: number;
   occupancyPercentage: number;
-  orders: any[];
+  orders?: any[];
 }
 
 interface DayCardProps {
@@ -102,9 +102,11 @@ export default function DayCard({
             {dayData.carCount} car{dayData.carCount !== 1 ? 's' : ''}
           </div>
           
-          <div className="text-xs text-gray-500">
-            {dayData.orders.length} order{dayData.orders.length !== 1 ? 's' : ''}
-          </div>
+          {dayData.orders && (
+            <div className="text-xs text-gray-500">
+              {dayData.orders.length} order{dayData.orders.length !== 1 ? 's' : ''}
+            </div>
+          )}
         </div>
       )}
       

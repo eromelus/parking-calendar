@@ -33,7 +33,7 @@ interface DayData {
   date: string;
   carCount: number;
   occupancyPercentage: number;
-  orders: WooOrder[];
+  orders?: WooOrder[];
 }
 
 interface SyncStatus {
@@ -68,77 +68,17 @@ export default function Calendar({ className = "" }: CalendarProps) {
       const startDate = currentMonth.clone().startOf('month').subtract(1, 'month');
       const endDate = currentMonth.clone().endOf('month').add(2, 'months');
       
-      // Try to use optimized occupancy API first
-      try {
-        const response = await fetch(
-          `/api/occupancy?start_date=${startDate.format('YYYY-MM-DD')}&end_date=${endDate.format('YYYY-MM-DD')}`
-        );
-        
-        if (response.ok) {
-          const data: DayData[] = await response.json();
-          setDayData(data);
-          setError(null);
-          return;
-        }
-      } catch (occupancyError) {
-        console.warn('Occupancy API failed, falling back to orders API');
-      }
-      
-      // Fallback to orders API with client-side processing
+      // Use occupancy API as single source of truth
       const response = await fetch(
-        `/api/orders?start_date=${startDate.format('YYYY-MM-DD')}&end_date=${endDate.format('YYYY-MM-DD')}`
+        `/api/occupancy?start_date=${startDate.format('YYYY-MM-DD')}&end_date=${endDate.format('YYYY-MM-DD')}`
       );
       
       if (!response.ok) {
         throw new Error("Failed to fetch calendar data");
       }
       
-      const fetchedOrders: WooOrder[] = await response.json();
-
-      // Process orders into day data (existing logic)
-      const bookings: { [date: string]: { count: number; orders: WooOrder[] } } = {};
-      
-      fetchedOrders.forEach((order: WooOrder) => {
-        order.line_items.forEach((item: LineItem) => {
-          const startDate = item.meta_data.find(
-            (m: MetaData) => m.key === "_prdd_lite_date"
-          )?.value;
-          const nightsMatch = item.name.match(/(\d+)-Night/);
-          const nights = nightsMatch ? parseInt(nightsMatch[1]) : 0;
-          const duration = nights + 1;
-          
-          if (startDate) {
-            for (let i = 0; i < duration; i++) {
-              const dateKey = moment(startDate)
-                .add(i, "days")
-                .format("YYYY-MM-DD");
-              
-              if (!bookings[dateKey]) {
-                bookings[dateKey] = { count: 0, orders: [] };
-              }
-              bookings[dateKey].count += item.quantity;
-              
-              // Add order to this date if not already included
-              const orderExists = bookings[dateKey].orders.some(o => o.id === order.id);
-              if (!orderExists) {
-                bookings[dateKey].orders.push(order);
-              }
-            }
-          }
-        });
-      });
-
-      // Convert to DayData array
-      const processedDayData: DayData[] = Object.entries(bookings).map(
-        ([date, data]) => ({
-          date,
-          carCount: data.count,
-          occupancyPercentage: Math.round((data.count / 115) * 100),
-          orders: data.orders,
-        })
-      );
-
-      setDayData(processedDayData);
+      const data: DayData[] = await response.json();
+      setDayData(data);
       setError(null);
     } catch (err) {
       const errorMessage =
@@ -196,8 +136,37 @@ export default function Calendar({ className = "" }: CalendarProps) {
     }
   };
 
-  const handleDateClick = (date: string) => {
+  const handleDateClick = async (date: string) => {
     setSelectedDate(date);
+    
+    // Check if this date already has orders loaded
+    const existingDayData = dayData.find(day => day.date === date);
+    if (existingDayData?.orders) {
+      return; // Orders already loaded
+    }
+    
+    // Fetch orders for this specific date
+    try {
+      const response = await fetch(
+        `/api/occupancy?start_date=${date}&end_date=${date}&include_orders=true`
+      );
+      
+      if (response.ok) {
+        const data: DayData[] = await response.json();
+        const dayWithOrders = data[0];
+        
+        // Update the existing day data with orders
+        setDayData(prevData => 
+          prevData.map(day => 
+            day.date === date 
+              ? { ...day, orders: dayWithOrders.orders || [] }
+              : day
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Failed to fetch orders for date:', date, error);
+    }
   };
 
   const handleCloseModal = () => {

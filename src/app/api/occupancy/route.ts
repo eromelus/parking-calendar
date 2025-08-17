@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
+    const includeOrders = searchParams.get('include_orders') === 'true'
     
     if (!startDate || !endDate) {
       return NextResponse.json(
@@ -25,77 +26,70 @@ export async function GET(request: Request) {
       orderBy: { date: 'asc' }
     })
 
-    // Get orders for each date by finding line items with delivery dates
-    const formattedData = await Promise.all(occupancyData.map(async (day) => {
-      const dayString = day.date.toISOString().split('T')[0]
-      
-      // Find orders that have line items with delivery dates covering this day
-      const orders = await prisma.order.findMany({
-        where: {
-          lineItems: {
-            some: {
-              deliveryDate: {
-                lte: new Date(dayString)
-              },
-              cruiseDuration: {
-                not: null
-              }
-            }
-          }
+    // Use calculateDailyOccupancy for efficient calculation
+    const { calculateDailyOccupancy } = await import('@/lib/woo-transform')
+    
+    // Get all line items that could potentially span the date range
+    const earliestDate = new Date(startDate)
+    earliestDate.setDate(earliestDate.getDate() - 30) // Look back 30 days for long cruises
+    
+    const lineItems = await prisma.lineItem.findMany({
+      where: {
+        deliveryDate: {
+          gte: earliestDate,
+          lte: new Date(endDate)
         },
-        include: {
-          lineItems: {
-            where: {
-              deliveryDate: {
-                not: null
-              },
-              cruiseDuration: {
-                not: null
-              }
-            }
-          }
+        cruiseDuration: {
+          not: null
         }
-      })
+      },
+      include: {
+        order: true
+      }
+    })
 
-      // Filter orders that actually span this date
-      const ordersForThisDate = orders.filter(order => {
-        return order.lineItems.some(item => {
-          if (!item.deliveryDate || !item.cruiseDuration) return false
-          
-          const startDate = new Date(item.deliveryDate)
-          const endDate = new Date(startDate)
-          endDate.setDate(startDate.getDate() + item.cruiseDuration)
-          
-          const currentDate = new Date(dayString)
-          return currentDate >= startDate && currentDate <= endDate
-        })
-      })
-
-      // Calculate correct car count from actual orders for this date
-      const actualCarCount = ordersForThisDate.reduce((total, order) => {
-        return total + order.lineItems.reduce((orderTotal, item) => {
-          // Only count this line item if it spans this specific date
-          if (item.deliveryDate && item.cruiseDuration) {
+    // Calculate daily occupancy using the established logic
+    const occupancyMap = calculateDailyOccupancy(lineItems)
+    
+    // Create formatted data for the requested date range
+    const formattedData = []
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    
+    for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) {
+      const dateKey = date.toISOString().split('T')[0]
+      const carCount = occupancyMap.get(dateKey) || 0
+      
+      const dayData: any = {
+        date: dateKey,
+        carCount,
+        occupancyPercentage: Math.round((carCount / 115) * 100)
+      }
+      
+      // Only include orders if specifically requested
+      if (includeOrders) {
+        const ordersForThisDate = lineItems
+          .filter(item => {
+            if (!item.deliveryDate || !item.cruiseDuration) return false
+            
             const startDate = new Date(item.deliveryDate)
             const endDate = new Date(startDate)
             endDate.setDate(startDate.getDate() + item.cruiseDuration)
             
-            const currentDate = new Date(dayString)
-            if (currentDate >= startDate && currentDate <= endDate) {
-              return orderTotal + item.quantity
-            }
-          }
-          return orderTotal
-        }, 0)
-      }, 0)
-
-      return {
-        date: dayString,
-        carCount: actualCarCount, // Use real-time calculation instead of pre-calculated
-        occupancyPercentage: Math.round((actualCarCount / 115) * 100),
-        orders: ordersForThisDate.map(order => transformDBOrderForAPI(order))
+            const currentDate = new Date(dateKey)
+            return currentDate >= startDate && currentDate <= endDate
+          })
+          .map(item => item.order)
+          .filter((order, index, self) => self.findIndex(o => o.id === order.id) === index) // Deduplicate orders
+        
+        dayData.orders = ordersForThisDate.map(order => transformDBOrderForAPI({
+          ...order,
+          lineItems: lineItems.filter(item => item.orderId === order.id)
+        }))
       }
-    }))
+      
+      formattedData.push(dayData)
+    }
 
     return NextResponse.json(formattedData)
   } catch (error: any) {

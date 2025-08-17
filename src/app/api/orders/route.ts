@@ -35,13 +35,23 @@ export async function GET(request: Request) {
       },
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { dateCreated: 'desc' }
+      orderBy: { dateCreated: 'desc' },
+      distinct: ['id'] // Ensure unique orders
     })
 
     // Transform to match existing WooCommerce format for compatibility
     const formattedOrders = orders.map(order => transformDBOrderForAPI(order))
+    
+    // Deduplicate orders by id (in case of any remaining duplicates)
+    const uniqueOrders = formattedOrders.reduce((acc: any[], order: any) => {
+      const existing = acc.find(o => o.id === order.id)
+      if (!existing) {
+        acc.push(order)
+      }
+      return acc
+    }, [])
 
-    return NextResponse.json(formattedOrders)
+    return NextResponse.json(uniqueOrders)
   } catch (error: any) {
     console.error('Database query failed:', error)
     
