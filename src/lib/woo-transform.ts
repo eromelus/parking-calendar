@@ -1,4 +1,4 @@
-import { Order, LineItem } from '@prisma/client'
+import { LineItem } from '@prisma/client'
 import moment from 'moment'
 
 interface WooOrder {

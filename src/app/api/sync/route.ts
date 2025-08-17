@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
+import { transformWooOrderForDB, transformLineItemForDB, calculateDailyOccupancy } from '@/lib/woo-transform'
 import { prisma } from '@/lib/prisma'
-import { transformWooOrderForDB, calculateDailyOccupancy } from '@/lib/woo-transform'
 
 interface WooOrder {
   id: number;
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
         data: {
           status: errors.length > 0 ? 'failed' : 'completed',
           ordersProcessed,
-          errors: errors.length > 0 ? errors : null
+          errors: errors.length > 0 ? errors : undefined
         }
       })
 

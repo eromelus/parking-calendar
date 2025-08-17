@@ -6,7 +6,7 @@ interface DayData {
   date: string;
   carCount: number;
   occupancyPercentage: number;
-  orders: any[];
+  orders?: any[];
 }
 
 interface CalendarGridProps {
